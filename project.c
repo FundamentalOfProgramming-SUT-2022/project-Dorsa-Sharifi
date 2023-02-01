@@ -19,6 +19,8 @@ void cat(char *);
 void copy(char *);
 void removestr(char *);
 void paste(char *);
+void undo(char *);
+
 
 //Auxiliary Functions
 char *CheckQuote(char *);
@@ -27,6 +29,7 @@ int Counting_Directories(char *);
 int Directory_Existance(const char * );
 void makingdirectories(char *,int );
 char *REPLACE(char *);
+void BackupFile(char *);
 
 
 //body of functions
@@ -201,11 +204,13 @@ void insertstr(char *pathR){
     char *way2=(char *)malloc(1024*sizeof(char));
     char *rest=(char *)malloc(1024*sizeof(char));
     char *text=(char *)malloc(1024*sizeof(char));
+    char *backup=(char *)malloc(1024*sizeof(char));
     FILE *my_file;
     FILE *auxiliary;
     strcpy(masir,pathR);
     strcpy(way,pathR);
     filename=CheckQuote2(pathR);
+    strcpy(backup,filename);
     _getcwd(buffer,1024);
     strcat(buffer,"\\auxiliary.txt");//making a temp file 
     chdir("E:");
@@ -214,6 +219,7 @@ void insertstr(char *pathR){
         printf("Oops!Unable to open the directories/file.\n");
     }
     else{
+        BackupFile(backup);
         masir=strstr(masir,"--str");
         way2=strtok(masir," ");//inserttext;
         way2=strtok(NULL,"\n");
@@ -284,13 +290,17 @@ void insertstr(char *pathR){
 }     
 
 void cat(char *filename){
+    char *backup=(char *)malloc(1024*sizeof(char));
     FILE *my_file;
     char c;
+    filename=CheckQuote2(filename);
+    strcpy(backup,filename);
     my_file=fopen(filename,"r");
     if(my_file==NULL){
         printf("Oops!Unable to open the file.\n");        
     }
     else{
+        BackupFile(backup);
         printf("The data inside file is displayed below:\n");
         while((c=fgetc(my_file))!=EOF){
             printf("%c",c);
@@ -311,9 +321,11 @@ void removestr(char *command){
     char *rest=(char *)malloc(1024*sizeof(char));
     char *pos=(char *)malloc(1024*sizeof(char));
     char *pos2=(char *)malloc(1024*sizeof(char));
+    char *backup=(char *)malloc(1024*sizeof(char));
     FILE *my_file;
     FILE *tmp_file;
     address=CheckQuote(command);
+    strcpy(backup,address);
     rest=strstr(command,"--pos");
     pos=strtok(rest," ");//spliting --pos
     pos=strtok(NULL,":");
@@ -330,6 +342,7 @@ void removestr(char *command){
         printf("Oops!Unable to open the file.\n");
     }
     else{
+        BackupFile(backup);
         if(strcmp(pos2,"-f")==0){ //forward
             for(int k=1;k<=givenline;k++){
                 int charactercounter=0;
@@ -397,6 +410,7 @@ void copy(char *path){
     char *rest=(char *)malloc(1024*sizeof(char));
     char *direction=(char *)malloc(2);
     char *finalanswer=(char *)malloc(1024*sizeof(char));
+    char *backup=(char *)malloc(1024*sizeof(char));
     long long length;
     int c;
     int j=0;
@@ -407,6 +421,7 @@ void copy(char *path){
     char savedata[1024];
     FILE *my_file;
     address=CheckQuote(path);
+    strcpy(backup,address);
     rest=strstr(path,"--pos");
     pos=strtok(rest," ");//removing --pos
     pos=strtok(NULL,":");//line 
@@ -422,6 +437,7 @@ void copy(char *path){
         printf("Oops!Unable to open the file.\n");
     }
     else{
+        BackupFile(backup);
         if(strcmp(direction,"-f")==0){
             for(int i=1;i<=givenline;i++){//passing the file untill reaching the given position
                 int charactercounter=0;
@@ -477,12 +493,15 @@ void paste(char *path){
     char *cut2=(char *)malloc(1024*sizeof(char));
     char *cut3=(char *)malloc(1024*sizeof(char));
     char *cut4=(char *)malloc(1024*sizeof(char));
+    char *backup=(char *)malloc(1024*sizeof(char));
     OpenClipboard(0);
     HANDLE copieddata=GetClipboardData(CF_TEXT);
     savingdata=(char *)GlobalLock(copieddata);
     strcpy(cut1,path);
     strcpy(cut3,path);
     cut2=CheckQuote(cut1);//getting the address
+    strcpy(backup,cut2);
+    BackupFile(backup);
     cut3=strstr(cut3," --pos");//getting the pos
     cut4=strcat(cut2," --str ");
     cut4=strcat(cut4,savingdata);
@@ -492,6 +511,105 @@ void paste(char *path){
     insertstr(cut4);
     free(cut1);
     free(cut3);
+}
+
+void BackupFile(char *path){
+    char *pathcpy=(char *)malloc(1024*sizeof(char));
+    char *pathcpy2=(char *)malloc(1024*sizeof(char));
+    char *pathcpy3=(char *)malloc(2048*sizeof(char));
+    char add[2048]="Backup-";
+    char slash[2048]="/";
+    char slash2[2048]={};
+    FILE *mainfile;
+    FILE *backupfile;
+    int c;
+    int rest;
+    int number;
+    int mainlength;
+    int namelength;
+    path=CheckQuote2(path);
+    mainlength=strlen(path);
+    strcpy(pathcpy,path);
+    strcpy(pathcpy2,path);
+    number=Counting_Directories(path);
+    pathcpy=strtok(pathcpy,"/");
+    for(int i=1;i<number;i++){//getting the name of file
+        pathcpy=strtok(NULL,"/");
+    }
+    namelength=strlen(pathcpy);
+    strcat(add,pathcpy);//making the name of hidden file2
+    //some operation to get the address without the name of file
+    rest=mainlength-namelength;
+    for(int i=0;i<rest;i++){
+        strcpy(&pathcpy2[i],&pathcpy2[i]);
+    }
+    pathcpy2[rest]='\0';
+    strcat(pathcpy2,add);//address of hidden file
+    backupfile=fopen(pathcpy2,"w");
+    mainfile=fopen(path,"r");
+    rewind(backupfile);
+    if(backupfile==NULL){
+        printf("Oops!Something wrong happened during Backup Operation.\n");
+    }
+    else{
+        for(int i=0;(c=fgetc(mainfile))!=EOF;i++){
+            fputc(c,backupfile);
+        }
+        fclose(backupfile);
+        fclose(mainfile);
+        DWORD hiddenfile=GetFileAttributes(pathcpy2);
+        SetFileAttributes(pathcpy2,hiddenfile-FILE_ATTRIBUTE_HIDDEN);   
+    }
+}
+
+void undo(char *path){
+    int c;
+    int rest;
+    int number;
+    int mainlength;
+    int namelength;
+    char add[2048]="Backup-";
+    char slash[2048]="/";
+    char *pathcpy=(char *)malloc(1024*sizeof(char));
+    char *pathcpy2=(char *)malloc(1024*sizeof(char));
+    FILE *BackupFile;
+    FILE *MainFile;
+    path=CheckQuote2(path);
+    mainlength=strlen(path);
+    strcpy(pathcpy,path);
+    strcpy(pathcpy2,path);
+    number=Counting_Directories(path);
+    pathcpy=strtok(pathcpy,"/");
+    for(int i=1;i<number;i++){//getting the name of file
+        pathcpy=strtok(NULL,"/");
+    }
+    namelength=strlen(pathcpy);
+    strcat(add,pathcpy);//making the name of hidden file2
+    //some operation to get the address without the name of file
+    rest=mainlength-namelength;
+    for(int i=0;i<rest;i++){
+        strcpy(&pathcpy2[i],&pathcpy2[i]);
+    }
+    pathcpy2[rest]='\0';
+    strcat(pathcpy2,add);//address of hidden file
+    DWORD hiddenfile=GetFileAttributes(pathcpy2);
+    if((hiddenfile & FILE_ATTRIBUTE_HIDDEN)==FILE_ATTRIBUTE_HIDDEN){
+        SetFileAttributes(pathcpy2,hiddenfile & ~FILE_ATTRIBUTE_NORMAL);
+    }    
+    BackupFile=fopen(pathcpy2,"r");
+    MainFile=fopen(path,"w");
+    if(MainFile!=NULL && BackupFile!=NULL){
+        for(int i=0;(c=fgetc(BackupFile))!=EOF;i++){
+            fputc(c,MainFile);
+        }
+        fclose(MainFile);
+        fclose(BackupFile);
+        remove(pathcpy2);
+        printf("Congrats!Your last change is undone.\n");
+    }
+    else{
+        printf("Oops!Something goes wrong while undoing your last change.\n");
+    }
 }
 
 int main(){
@@ -541,6 +659,10 @@ int main(){
         else  if( (strcmp(command,"pastestr")==0) && (strcmp(command2,"--file")==0) ){
             pathR=strtok(NULL,"\n");//getting the rest of command
             paste(pathR);
+        }
+        else if( (strcmp(command,"undo")==0) && (strcmp(command2,"--file")==0) ){
+            pathR=strtok(NULL,"\n");//getting the rest of command
+            undo(pathR);
         }
     }
 }
