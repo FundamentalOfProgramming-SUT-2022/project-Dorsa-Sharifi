@@ -20,17 +20,20 @@ void copy(char *);
 void removestr(char *);
 void paste(char *);
 void undo(char *);
-
+void grepempty(char *,int );
 
 //Auxiliary Functions
 char *CheckQuote(char *);
 char *CheckQuote2(char *);
+char *CheckQuote3(char *command);
 int Counting_Directories(char *);
 int Directory_Existance(const char * );
 void makingdirectories(char *,int );
 char *REPLACE(char *);
 void BackupFile(char *);
 
+//global variables
+int numberingrep=1;
 
 //body of functions
 char *CheckQuote(char *command){
@@ -67,6 +70,19 @@ char *CheckQuote2(char *command){
     return address;
 }
 
+char *CheckQuote3(char *command){
+    char *address=(char *)malloc(1024*sizeof(char));
+    char *checkquote=(char *)malloc(1024*sizeof(char));
+    strcpy(address,command);
+    checkquote=strstr(command,"\"");
+    if(checkquote==NULL){
+        address=strtok(address," ");
+    }
+    else{
+        address=CheckQuote2(address);
+    }
+    return address;
+}    
 int Counting_Directories(char *a){
     int counter=0;
     char *path2=(char *)malloc(sizeof(char)*10000);
@@ -612,12 +628,150 @@ void undo(char *path){
     }
 }
 
+int AddressCounter(char *cpy2){
+    int rootcounter=0;
+    for (int i=0;i<strlen(cpy2);i++){
+        if((strstr(&cpy2[i],"/")==&cpy2[i]) && (strstr(&cpy2[i+1],"r")==&cpy2[i+1]) && (strstr(&cpy2[i+2],"o")==&cpy2[i+2]) && 
+        (strstr(&cpy2[i+3],"o")==&cpy2[i+3]) && (strstr(&cpy2[i+4],"t")==&cpy2[i+4]) && (strstr(&cpy2[i+5],"/")==&cpy2[i+5])){
+            rootcounter++;
+            i=i+6;
+        }
+    }
+    return rootcounter;
+}
+
+void SearchInFile(char *substring,char *address,int sign,int addresscounter,int controller){
+    chdir("E:/");
+    int eof=0;
+    int linecounter=0;
+    int findresult=0;
+    char substrfound[1024][1024];
+    FILE *myfile;
+    substring=CheckQuote3(substring);
+    myfile=fopen(address,"r");
+    if(myfile==NULL){
+        printf("Oops!Unable to open the file!.\n");
+    } 
+    else{
+        if(sign==0){
+            while(!feof(myfile) && !ferror(myfile)){
+                if(fgets(substrfound[linecounter],1024,myfile)!=NULL){
+                    if(strstr(substrfound[linecounter],substring)!=NULL){
+                        printf("%s found in %s\n",substrfound[linecounter],address);
+                        findresult++;
+                    }
+                }
+                linecounter++;
+            }    
+        }
+        else if(sign==1){
+            while(!feof(myfile) && !ferror(myfile)){
+                if(fgets(substrfound[linecounter],1024,myfile)!=NULL){
+                    if(strstr(substrfound[linecounter],substring)!=NULL){
+                        numberingrep++;
+                        findresult++;
+                    }
+                }    
+                linecounter++;
+            }
+            if(controller==addresscounter-1){  
+                printf("The number of matches found in all addresses is:%d",numberingrep); 
+            } 
+        }
+        else if(sign==2){
+            while(!feof(myfile) && !ferror(myfile)){
+                if(fgets(substrfound[linecounter],1024,myfile)!=NULL){
+                    if(strstr(substrfound[linecounter],substring)!=NULL){
+                        numberingrep++;
+                        findresult++;
+                    }
+                }    
+                linecounter++;
+            }
+            if(findresult!=0){
+                printf("Match Found in: %s\n",address);
+            }
+        }
+        else if(findresult==0){
+            printf("No Match Found In %s.\n",address);
+        }
+    }
+    fclose(myfile);
+}
+
+void grepempty(char *path,int sign){
+    int j=0;
+    int k=0;
+    int addresscounter;
+    char *cpy1=(char *)malloc(1024*sizeof(char));
+    char *cpy2=(char *)malloc(1024*sizeof(char));
+    char *cpy3=(char *)malloc(1024*sizeof(char));
+    char *cpy5=(char *)malloc(1024*sizeof(char));
+    strcpy(cpy2,path);
+    //getting the substring we're looking for & separating its quotations
+    for(int i=0;i<strlen(path);i++){
+        if((strstr(&path[i],"-")==&path[i]) && (strstr(&path[i+1],"-")==&path[i+1]) && (strstr(&path[i+2],"f")==&path[i+2]) && (strstr(&path[i+3],"i")==&path[i+3]) 
+            && (strstr(&path[i+4],"l")==&path[i+4]) && (strstr(&path[i+5],"e")==&path[i+5]) && (strstr(&path[i+6],"s")==&path[i+6])){
+            cpy1[i]='\0';
+            break;
+        }
+        else{
+            strcpy(&cpy1[i],&path[i]);
+        }
+    }
+    cpy2=strstr(cpy2,"--files");
+    cpy2=strtok(cpy2," ");//--files
+    cpy2=strtok(NULL,"\n");//string of addresses
+    strcpy(cpy3,cpy2);
+    addresscounter=AddressCounter(cpy3);
+    //finding address of files
+    for(int i=0;i<strlen(path);i++){
+        j=0;
+        if(cpy2[i]=='"'){
+            k++;
+            cpy5[j]=cpy2[i];
+            i++;
+            j++;
+            while(cpy2[i]!='"'){
+                cpy5[j]=cpy2[i];
+                j++;
+                i++;
+            }
+            cpy5[j]='\0';
+            i++;
+            cpy5=CheckQuote2(cpy5);
+            SearchInFile(cpy1,cpy5,sign,addresscounter,k); 
+        }
+        else{
+            k++;
+            j=0;
+            i++;
+            cpy5[j]=cpy2[i];
+            i++;
+            j++;
+            while(cpy2[i]!=' ' || cpy2[i]=='\n'){
+                cpy5[j]=cpy2[i];
+                j++;
+                i++;
+            }
+            cpy5[j]='\0';
+            SearchInFile(cpy1,cpy5,sign,addresscounter,k); 
+        }
+    }
+    free(cpy1);
+    free(cpy2);
+    free(cpy3);
+    free(cpy5);
+    numberingrep=1;
+}
+
 int main(){
     char *path=(char *)malloc(sizeof(char)*10000);
     char *command;
     char *command2;
     char *pathR;
     char *pathC;
+    int sign;
     int counter=0;
     char *root;
     mkdir("E:/root");
@@ -663,6 +817,24 @@ int main(){
         else if( (strcmp(command,"undo")==0) && (strcmp(command2,"--file")==0) ){
             pathR=strtok(NULL,"\n");//getting the rest of command
             undo(pathR);
+        }
+        else if( (strcmp(command,"grep")==0) && (strcmp(command2,"--str")==0) ){
+            sign=0;
+            pathR=strtok(NULL,"\n");//getting the rest of command
+            //printf("%s\n",pathR);
+            grepempty(pathR,sign);
+        }
+        else if( (strcmp(command,"grep")==0) && (strcmp(command2,"-C")==0) ){
+            sign=1;
+            pathR=strtok(NULL," ");
+            pathR=strtok(NULL,"\n");//getting the rest of command
+            grepempty(pathR,sign);
+        }
+        else if( (strcmp(command,"grep")==0) && (strcmp(command2,"-I")==0) ){
+            sign=2;
+            pathR=strtok(NULL," ");
+            pathR=strtok(NULL,"\n");//getting the rest of command
+            grepempty(pathR,sign);
         }
     }
 }
