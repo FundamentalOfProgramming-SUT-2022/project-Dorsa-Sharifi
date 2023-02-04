@@ -1,6 +1,5 @@
 /*Name:Dorsa Sharifi Ghombavani
   Student ID:401170604*/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,6 +23,7 @@ void undo(char *);
 void grepempty(char *,int );
 void autoindent(char *);
 void find(char *);
+void TextComparator(char *);
 
 //Auxiliary Functions
 char *CheckQuote(char *);
@@ -35,6 +35,7 @@ int Directory_Existance(const char * );
 void makingdirectories(char *,int );
 char *REPLACE(char *);
 void BackupFile(char *);
+int QuoteCounter(char *);
 
 //global variables
 int numberingrep=1;
@@ -670,6 +671,7 @@ void SearchInFile(char *substring,char *address,int sign,int addresscounter,int 
     char substrfound[1024][1024];
     FILE *myfile;
     substring=CheckQuote3(substring);
+    BackupFile(address);
     myfile=fopen(address,"r");
     if(myfile==NULL){
         printf("Oops!Unable to open the file!\n");
@@ -895,6 +897,230 @@ void autoindent(char *address){
         free(previous);
     }        
 }
+
+int QuoteCounter(char *path){
+    int QuoteNumerator=0;
+    for(int i=0;i<strlen(path);i++){
+        if(path[i]=='"'){
+            QuoteNumerator++;
+        }
+    }
+    return QuoteNumerator;
+}
+void TextComparator(char *path){
+    int c;
+    int j=0;
+    int k=0;
+    int decider;
+    int round=0;
+    int round2=0;
+    int line1=1;
+    int line2=1;
+    int help=1;
+    FILE *file1;
+    FILE *file2;
+    bool keep_reading=true;
+    char *slash="/";
+    char *cpy1=(char *)malloc(1024*sizeof(char));
+    char *cpy2=(char *)malloc(1024*sizeof(char));
+    char *cpy3=(char *)malloc(1024*sizeof(char));
+    char *buffer1=(char *)malloc(1024*sizeof(char));
+    char *buffer2=(char *)malloc(1024*sizeof(char));
+    strcpy(cpy1,path);
+    decider=QuoteCounter(path);
+    //finding addresses 
+    if(decider==2){//only one of the addresses has Quotation
+        for(int i=0;i<strlen(path);i++){
+            j=0;
+            if(cpy1[i]=='"'){//if the address starts with Quotation mark
+                k++;
+                cpy2[j]=cpy1[i];
+                i++;
+                j++;
+                while(cpy1[i]!='"'){
+                    cpy2[j]=cpy1[i];
+                    j++;
+                    i++;
+                }
+                cpy2[j]='\0';
+                i++;
+                cpy2=CheckQuote2(cpy2);
+            }
+            else{//if the address doesn't start with Quotation mark
+                k++;
+                j=0;
+                cpy3[j]=cpy1[i];
+                i++;
+                j++;
+                while(cpy1[i]!=' ' || cpy1[i]=='\n'){
+                    cpy3[j]=cpy1[i];
+                    j++;
+                    i++;
+                }
+                cpy3[j]='\0';                
+            }
+        }
+    } 
+    else if(decider==0){//none of the addresses has Quotation
+        for(int i=0;i<strlen(path);i++){    
+            if(round==0){
+                k++;
+                j=0;
+                cpy2[j]=cpy1[i];
+                i++;
+                j++;
+                while(cpy1[i]!=' ' || cpy1[i]=='\n'){
+                    cpy2[j]=cpy1[i];
+                    j++;
+                    i++;
+                }
+                cpy2[j]='\0';
+                round++;
+            }
+            if(round==1){
+                k++;
+                j=0;
+                cpy3[j]=cpy1[i];
+                i++;
+                j++;
+                while(cpy1[i]!=' ' || cpy1[i]=='\n'){
+                    cpy3[j]=cpy1[i];
+                    j++;
+                    i++;
+                }
+                cpy3[j]='\0';
+            }
+        }
+    } 
+    else if(decider==4){//both addresses has Quotation
+        for(int i=0;i<strlen(path);i++){
+            if(round==0){
+                j=0;
+                if(cpy1[i]=='"'){
+                    k++;
+                    cpy2[j]=cpy1[i];
+                    i++;
+                    j++;
+                    while(cpy1[i]!='"'){
+                        cpy2[j]=cpy1[i];
+                        j++;
+                        i++;
+                    }
+                    cpy2[j]='\0';
+                    i++;
+                    cpy2=CheckQuote2(cpy2);
+                    round++;
+                }
+            }
+            if(round==1){
+                j=0;
+                if(cpy1[i]=='"'){
+                    k++;
+                    cpy3[j]=cpy1[i];
+                    i++;
+                    j++;
+                    while(cpy1[i]!='"'){
+                        cpy3[j]=cpy1[i];
+                        j++;
+                        i++;
+                    }
+                    cpy3[j]='\0';
+                    i++;
+                    cpy3=CheckQuote2(cpy3);
+                }    
+            }
+        } 
+    }
+    file1=fopen(cpy2,"r");
+    file2=fopen(cpy3,"r");
+    if((file1==NULL)){
+        printf("Oops!Unable to open one of the files.\n");
+    }
+    else{
+        for(int i=0;(c=fgetc(file1))!=EOF;i++){
+            if(c=='\n'){
+                line1++;
+            }    
+        }    
+        rewind(file2);
+        for(int j=0;(c=fgetc(file2))!=EOF;j++){
+            if(c=='\n'){
+                line2++;
+            }    
+        }
+        rewind(file1);
+        rewind(file2);   
+        for(int k=1;keep_reading;k++){
+            if(line1==line2){
+                fgets(buffer1,2048,file1);
+                fgets(buffer2,2048,file2);
+                help++;
+                if(strcmp(buffer1,buffer2)!=0){
+                    printf("\n============ #%d ============\n",help);
+                    printf("File 1:%s",buffer1);
+                    if(help==line1){
+                        printf("\n");
+                    }
+                    printf("File 2:%s",buffer2);
+                }
+                if((feof(file1)!=0) && (feof(file2)!=0)){
+                    keep_reading=false;
+                }
+            }    
+            if(line1>line2){
+                fgets(buffer1,2048,file1);
+                if(help<=line2){
+                    fgets(buffer2,2048,file2);
+                    if(strcmp(buffer1,buffer2)!=0 ){
+                        printf("\n============ #%d ============\n",help);
+                        printf("File 1:%s",buffer1);
+                        printf("File 2:%s",buffer2);
+                    }
+                    if(help==line2){
+                        printf("\n");
+                    }
+                }    
+                else{     
+                    printf("\n<<<<<<<<<<<< #%d - #%d <<<<<<<<<<<<\n",help,line1);
+                    printf("%s",buffer1);
+                    if(feof(file1)!=0){
+                        keep_reading=false;
+                    }
+                }    
+                help++;
+            }
+            else if(line2>line1){
+                fgets(buffer2,2048,file2);
+                if(help<=line1){
+                    fgets(buffer1,2048,file1);
+                    if(strcmp(buffer1,buffer2)!=0){
+                        printf("\n============ #%d ============\n",help);
+                        printf("File 1:%s",buffer1);
+                        if(help==line1){
+                            printf("\n");
+                        }
+                        printf("File 2:%s",buffer2);
+                    }
+                }
+                else{     
+                    printf("\n>>>>>>>>>>>> #%d - #%d >>>>>>>>>>>>\n",help,line2);
+                    printf("%s",buffer2);
+                    if(feof(file2)!=0){
+                        keep_reading=false;
+                    }
+                }    
+                help++;    
+            }  
+        }    
+    }
+    fclose(file1);
+    fclose(file2);
+    free(cpy1);
+    free(cpy2);
+    free(cpy3);
+    free(buffer1);
+    free(buffer2);
+}
 int main(){
     char *path=(char *)malloc(sizeof(char)*10000);
     char *path2=(char *)malloc(sizeof(char)*10000);
@@ -972,10 +1198,15 @@ int main(){
             pathR=strtok(NULL,"\n");//getting the rest of command
             find(pathR);
         }
-        else if( (strcmp(command,"auto-indent")==0)){
+        else if( (strcmp(command,"auto-indent")==0) ){
             pathR=strtok(path2," ");//separating auto-indent
             pathC=strtok(NULL,"\n");//getting the rest of command
             autoindent(pathC);
+        }
+        else if( (strcmp(command,"compare")==0) ){
+            pathR=strtok(path2," ");
+            pathC=strtok(NULL,"\n");
+            TextComparator(pathC);
         }
     }
 }
