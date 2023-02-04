@@ -11,6 +11,7 @@
 #include <direct.h>
 #include <stdbool.h>
 #include <windows.h>
+#include <ctype.h>
 
 //Main Functions
 void Createfile(char *);
@@ -21,11 +22,14 @@ void removestr(char *);
 void paste(char *);
 void undo(char *);
 void grepempty(char *,int );
+void autoindent(char *);
+void find(char *);
 
 //Auxiliary Functions
 char *CheckQuote(char *);
 char *CheckQuote2(char *);
-char *CheckQuote3(char *command);
+char *CheckQuote3(char *);
+char *CheckQuote4(char *);
 int Counting_Directories(char *);
 int Directory_Existance(const char * );
 void makingdirectories(char *,int );
@@ -82,6 +86,24 @@ char *CheckQuote3(char *command){
         address=CheckQuote2(address);
     }
     return address;
+}
+
+char *CheckQuote4(char *command){
+    char *addrress=(char *)malloc(1024*sizeof(char));
+    char *checkquote=(char *)malloc(1024*sizeof(char));
+    strcpy(addrress,command);
+    for (int i=0;i<strlen(addrress);i++){
+        if((strstr(&addrress[i],"-")==&addrress[i]) && (strstr(&addrress[i+1],"-")==&addrress[i+1]) && (strstr(&addrress[i+2],"f")==&addrress[i+2]) &&
+        (strstr(&addrress[i+3],"i")==&addrress[i+3]) && (strstr(&addrress[i+4],"l")==&addrress[i+4]) && (strstr(&addrress[i+5],"e")==&addrress[i+5])){
+            checkquote[i]='\0';
+            break;
+        }
+        else{
+            strcpy(&checkquote[i],&addrress[i]);
+        }
+    }
+    checkquote=CheckQuote2(checkquote);
+    return checkquote;
 }    
 int Counting_Directories(char *a){
     int counter=0;
@@ -650,7 +672,7 @@ void SearchInFile(char *substring,char *address,int sign,int addresscounter,int 
     substring=CheckQuote3(substring);
     myfile=fopen(address,"r");
     if(myfile==NULL){
-        printf("Oops!Unable to open the file!.\n");
+        printf("Oops!Unable to open the file!\n");
     } 
     else{
         if(sign==0){
@@ -765,8 +787,117 @@ void grepempty(char *path,int sign){
     numberingrep=1;
 }
 
+void find(char *command){
+    //INCOMPLETE
+    /*
+    char *cpy1=(char *)malloc(1024*sizeof(char));
+    char *cpy2=(char *)malloc(1024*sizeof(char));
+    char *cpy3=(char *)malloc(1024*sizeof(char));
+    strcpy(cpy1,command);
+    strcpy(cpy2,command);
+    cpy1=CheckQuote4(cpy1);//getting the substring
+    cpy2=strstr(cpy2,"--file");//reaching to the --file
+    cpy2=strtok(cpy2," ");//separating --file
+    cpy2=strtok(NULL,"\n");//separating address of file
+    for(int i=0;i<strlen(cpy2);i++){
+        if((strstr(&cpy2[i],"-")==&cpy2[i]) && (strstr(&cpy2[i+1],"c")==&cpy2[i+1]) && (strstr(&cpy2[i+2],"o")==&cpy2[i+2]) &&
+        (strstr(&cpy2[i+3],"u")==&cpy2[i+3]) && (strstr(&cpy2[i+4],"n")==&cpy2[i+4]) && (strstr(&cpy2[i+5],"t")==&cpy2[i+5])){
+            cpy3[i]='\0';
+            break;
+        }
+
+    }
+    //cpy2=CheckQuote2(cpy2);
+    //printf("%s\n",cpy2);*/
+}
+
+void autoindent(char *address){
+    int c;
+    int left=0;
+    int right=0;
+    int tabcontrol=0;
+    FILE *myfile;
+    FILE *tmpfile;
+    char rightbraces[1024];
+    char leftbraces[1024];
+    char *previous=(char *)malloc(2);
+    char *cpy1=(char *)malloc(1024*sizeof(char));
+    strcpy(cpy1,address);
+    cpy1=CheckQuote2(cpy1);
+    BackupFile(cpy1);
+    myfile=fopen(cpy1,"r");
+    if(myfile==NULL){
+        printf("Oops!Unable to open the file.\n");
+    }
+    else{
+        for(int i=0;(c=fgetc(myfile))!=EOF;i++){
+            if(c=='{'){
+                rightbraces[right]=c;
+                right++;
+            }
+            else if(c=='}'){
+                leftbraces[left]=c;
+                left++;
+            }
+        }
+        rightbraces[right]='\0';
+        leftbraces[left]='\0';
+        if(right!=left){
+            printf("Oops!The number of right and left braces are not equal.\n");
+        }
+        else{
+            rewind(myfile);
+            tmpfile=fopen("/root/tmpfile.txt","w");
+            //saving data in a tmp file
+            for(int  k=0;(c=fgetc(myfile))!=EOF;k++){
+                fputc(c,tmpfile);
+            }
+            fclose(tmpfile);
+            fclose(myfile);
+            tmpfile=fopen("/root/tmpfile.txt","r");
+            myfile=fopen(cpy1,"w");
+            for(int f=0;(c=fgetc(tmpfile))!=EOF;f++){
+                if(c=='{'){
+                    if((previous[0]!=' ') && (previous[0]!='{') && (previous[0]!='\n')){
+                        fputc(' ',myfile);
+                    }
+                    fputc(c,myfile);
+                    fputc('\n',myfile);
+                    tabcontrol++;
+                    for(int y=0;y<tabcontrol;y++){
+                        fputc('\t',myfile);
+                    }
+                    previous[1]=previous[0];
+                    previous[0]='{';
+                }
+                else if(c=='}'){
+                    tabcontrol--;
+                    fputc('\n',myfile);
+                    for(int r=0;r<tabcontrol;r++){
+                        fputc('\t',myfile);
+                    }
+                    fputc('}',myfile);
+                    previous[1]=previous[0];
+                    previous[0]='}';
+                }    
+                if((c!='{') && (c!='}')){
+                    fputc(c,myfile);
+                    previous[1]=previous[0];
+                    previous[0]=c;
+                }
+            }
+            fclose(myfile);
+            fclose(tmpfile);
+            remove("/root/tmpfile.txt");
+            printf("Congrats!The text in you file is marked off by Indentation.\n");
+        }
+        free(cpy1);
+        free(previous);
+    }        
+}
 int main(){
     char *path=(char *)malloc(sizeof(char)*10000);
+    char *path2=(char *)malloc(sizeof(char)*10000);
     char *command;
     char *command2;
     char *pathR;
@@ -778,6 +909,7 @@ int main(){
     chdir("E:/root");                      
     while (1){
         gets(path);
+        strcpy(path2,path);
         command=strtok(path," ");//recognizing the user's command
         command2=strtok(NULL," ");//recognizing whether it has --file or what
         if( (strcmp(command,"createfile")==0) && (strcmp(command2,"--file")==0) ){
@@ -835,6 +967,15 @@ int main(){
             pathR=strtok(NULL," ");
             pathR=strtok(NULL,"\n");//getting the rest of command
             grepempty(pathR,sign);
+        }
+        else if( (strcmp(command,"find")==0 ) && (strcmp(command2,"--str")==0) ){
+            pathR=strtok(NULL,"\n");//getting the rest of command
+            find(pathR);
+        }
+        else if( (strcmp(command,"auto-indent")==0)){
+            pathR=strtok(path2," ");//separating auto-indent
+            pathC=strtok(NULL,"\n");//getting the rest of command
+            autoindent(pathC);
         }
     }
 }
